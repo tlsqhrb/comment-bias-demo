@@ -1,265 +1,413 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>의견 선작성 기반 댓글 편향 완화 데모</title>
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      max-width: 900px;
-      margin: 40px auto;
-      padding: 0 16px 80px;
-      background-color: #f5f7fb;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .card {
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-      margin-bottom: 20px;
-    }
-    .card h2, .card h3 {
-      margin-top: 0;
-    }
-    textarea {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      resize: vertical;
-      font-family: inherit;
-    }
-    button {
-      margin-top: 10px;
-      padding: 10px 18px;
-      border-radius: 8px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-size: 15px;
-      cursor: pointer;
-    }
-    button:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-    }
-    .my-opinion {
-      background: #e0edff;
-      border: 1px solid #bfdbfe;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 12px;
-      margin-left: 6px;
-    }
-    .badge.pro {
-      background: #dcfce7;
-      color: #166534;
-    }
-    .badge.con {
-      background: #fee2e2;
-      color: #b91c1c;
-    }
-    .badge.neutral {
-      background: #e5e7eb;
-      color: #374151;
-    }
-    ul {
-      padding-left: 18px;
-    }
-    li {
-      margin-bottom: 8px;
-    }
-    .ratio-bar {
-      display: flex;
-      height: 16px;
-      border-radius: 999px;
-      overflow: hidden;
-      background: #e5e7eb;
-      margin-top: 8px;
-    }
-    .ratio-seg {
-      height: 100%;
-    }
-    .ratio-seg.pro {
-      background: #22c55e;
-    }
-    .ratio-seg.con {
-      background: #ef4444;
-    }
-    .ratio-seg.neutral {
-      background: #9ca3af;
-    }
-    .ratio-legend {
-      margin-top: 8px;
-      font-size: 14px;
-      color: #374151;
-    }
-    .small {
-      font-size: 13px;
-      color: #6b7280;
-    }
-    #errorMsg {
-      color: #b91c1c;
-      margin-top: 8px;
-      font-size: 14px;
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <title>댓글 프레이밍 방지 데모</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 16px 40px;
+            background: #f5f7fb;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        h2 {
+            font-size: 18px;
+            margin-top: 24px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            font-size: 14px;
+            resize: vertical;
+        }
+        textarea {
+            min-height: 80px;
+        }
+        button {
+            margin-top: 12px;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: none;
+            background: #2563eb;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #9ca3af;
+            cursor: default;
+        }
+        .small {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .result-block {
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .tag-pro {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        .tag-con {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .tag-neutral {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .comment-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        .ratio-bar {
+            display: flex;
+            height: 14px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #e5e7eb;
+            margin-top: 6px;
+            margin-bottom: 4px;
+        }
+        .ratio-pro {
+            background: #4ade80;
+        }
+        .ratio-con {
+            background: #f97373;
+        }
+        .ratio-neutral {
+            background: #a5b4fc;
+        }
+        .ratio-labels {
+            font-size: 12px;
+            color: #4b5563;
+        }
+        .error {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #b91c1c;
+        }
+        .success {
+            margin-top: 8px;
+            font-size: 13px;
+            color: #15803d;
+        }
+        .mode-row {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .mode-row span {
+            font-size: 13px;
+            color: #4b5563;
+        }
+        .radio-label {
+            font-size: 13px;
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body>
-  <h1>의견 선작성 기반 댓글 여론 분석 데모</h1>
-
-  <div class="card">
-    <h2>게시물</h2>
-    <p class="small">✏️ 예시 기사</p>
-    <p>
-      “최근 대중교통 요금 인상 방안이 발표되었습니다. 정부는 재정 부담을 이유로 들고 있으며,
-      시민들은 생활비 부담 증가를 우려하고 있습니다. 이에 대한 당신의 생각은 어떠신가요?”
-    </p>
-  </div>
-
-  <div class="card">
-    <h2>① 먼저 당신의 의견을 남겨주세요</h2>
+    <h1>댓글 프레이밍 방지 데모</h1>
     <p class="small">
-      ※ 다른 사람의 댓글을 보기 전에, 게시물에 대한 당신의 솔직한 생각을 한 줄로 적어주세요.
+        먼저 <strong>내 의견을 작성한 뒤</strong>, 그 다음에 댓글 전체의 찬·반·중립 분포를 확인하는 실험용 도구입니다.<br />
+        아래에서 <strong>데모 댓글</strong> 또는 <strong>YouTube 댓글</strong>을 선택해서 테스트할 수 있습니다.
     </p>
-    <textarea id="opinion" rows="4" placeholder="예: 재정 상황을 생각하면 어느 정도 인상은 이해되지만, 서민 부담 완화 대책도 같이 나와야 할 것 같습니다."></textarea>
-    <br />
-    <button id="submitBtn">내 의견 등록하고 댓글 보기</button>
-    <div id="errorMsg"></div>
-  </div>
-
-  <div id="result" style="display:none;">
-    <div class="card my-opinion">
-      <h3>② 나의 첫 의견</h3>
-      <p id="myOpinionText"></p>
-      <p class="small">※ 이 의견은 당신이 다른 댓글을 보기 전에 스스로 남긴 기준점(anchor)입니다.</p>
-    </div>
 
     <div class="card">
-      <h3>③ 전체 댓글 여론 비율</h3>
-      <p id="ratioText" class="small">분석 중...</p>
-      <div class="ratio-bar">
-        <div id="ratioPro" class="ratio-seg pro" style="width:0%;"></div>
-        <div id="ratioCon" class="ratio-seg con" style="width:0%;"></div>
-        <div id="ratioNeu" class="ratio-seg neutral" style="width:0%;"></div>
-      </div>
-      <div class="ratio-legend" id="ratioLegend"></div>
+        <h2>1. 분석 모드 선택 & 내 의견 작성</h2>
+
+        <div class="mode-row">
+            <span>분석 모드:</span>
+            <label class="radio-label">
+                <input type="radio" name="mode" value="demo" checked />
+                데모 (샘플 댓글)
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="mode" value="youtube" />
+                YouTube 영상 댓글
+            </label>
+        </div>
+
+        <div id="youtubeInputBlock" style="display:none; margin-bottom: 10px;">
+            <label for="videoInput">YouTube URL 또는 영상 ID</label>
+            <input id="videoInput" type="text" placeholder="예) https://www.youtube.com/watch?v=dQw4w9WgXcQ 또는 dQw4w9WgXcQ" />
+            <p class="small">
+                Shorts도 URL 또는 ID만 입력하면 됩니다. (예: https://youtube.com/shorts/...)
+            </p>
+        </div>
+
+        <label for="postId">게시물 ID (데모 모드에서만 사용, 임의 값)</label>
+        <input id="postId" type="text" value="demo-post-1" />
+
+        <label for="userId" style="margin-top: 10px;">내 사용자 ID (임의 값)</label>
+        <input id="userId" type="text" value="user-1" />
+
+        <label for="opinion" style="margin-top: 10px;">내 의견</label>
+        <textarea id="opinion" placeholder="이 이슈에 대한 나의 생각을 먼저 정리해보세요."></textarea>
+
+        <button id="submitBtn">의견 등록 + 댓글 분석 보기</button>
+        <div id="statusMsg" class="small"></div>
     </div>
 
-    <div class="card">
-      <h3>④ 다른 사람들의 댓글 (다양한 의견 보기)</h3>
-      <p class="small">
-        ※ 찬성/반대/중립 의견이 섞여서 노출됩니다. 각 댓글 옆의 배지를 통해 입장을 확인할 수 있습니다.
-      </p>
-      <ul id="commentList"></ul>
+    <div id="resultSection" class="card" style="display: none;">
+        <h2>2. 분석 결과</h2>
+        <div id="targetInfoBlock" class="result-block"></div>
+        <div id="myOpinionBlock" class="result-block"></div>
+        <div id="ratioBlock" class="result-block"></div>
+        <div id="commentsBlock" class="result-block"></div>
     </div>
-  </div>
 
-  <script>
-    const submitBtn = document.getElementById("submitBtn");
-    const opinionInput = document.getElementById("opinion");
-    const resultDiv = document.getElementById("result");
-    const myOpinionText = document.getElementById("myOpinionText");
-    const ratioText = document.getElementById("ratioText");
-    const ratioLegend = document.getElementById("ratioLegend");
-    const commentList = document.getElementById("commentList");
-    const errorMsg = document.getElementById("errorMsg");
+    <script>
+        const submitBtn = document.getElementById("submitBtn");
+        const statusMsg = document.getElementById("statusMsg");
+        const resultSection = document.getElementById("resultSection");
+        const myOpinionBlock = document.getElementById("myOpinionBlock");
+        const ratioBlock = document.getElementById("ratioBlock");
+        const commentsBlock = document.getElementById("commentsBlock");
+        const targetInfoBlock = document.getElementById("targetInfoBlock");
+        const youtubeInputBlock = document.getElementById("youtubeInputBlock");
 
-    const ratioProSeg = document.getElementById("ratioPro");
-    const ratioConSeg = document.getElementById("ratioCon");
-    const ratioNeuSeg = document.getElementById("ratioNeu");
-
-    submitBtn.addEventListener("click", async () => {
-      const opinion = opinionInput.value.trim();
-      errorMsg.textContent = "";
-
-      if (!opinion) {
-        errorMsg.textContent = "먼저 당신의 의견을 입력해주세요.";
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "분석 중...";
-
-      try {
-        const res = await fetch("http://127.0.0.1:8000/opinion", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            post_id: "demo-post-1",
-            user_id: "demo-user-1",
-            opinion_text: opinion
-          })
+        // 모드 라디오 버튼에 따라 YouTube 입력창 on/off
+        const modeRadios = document.querySelectorAll('input[name="mode"]');
+        modeRadios.forEach(r => {
+            r.addEventListener("change", () => {
+                const mode = getCurrentMode();
+                if (mode === "youtube") {
+                    youtubeInputBlock.style.display = "block";
+                } else {
+                    youtubeInputBlock.style.display = "none";
+                }
+                statusMsg.textContent = "";
+            });
         });
 
-        if (!res.ok) {
-          throw new Error("서버 응답이 올바르지 않습니다. (status " + res.status + ")");
+        function getCurrentMode() {
+            const checked = document.querySelector('input[name="mode"]:checked');
+            return checked ? checked.value : "demo";
         }
 
-        const data = await res.json();
+        // YouTube URL 또는 ID에서 video_id 추출
+        function extractVideoId(input) {
+            if (!input) return "";
+            input = input.trim();
 
-        // 1) 내 의견 표시
-        myOpinionText.textContent = data.my_opinion;
+            // 이미 ID처럼 짧은 문자열로 들어온 경우 (대략 11자)
+            if (!input.includes("http")) {
+                return input;
+            }
 
-        // 2) 비율 표시
-        const pro = Math.round(data.ratio.pro * 100);
-        const con = Math.round(data.ratio.con * 100);
-        const neu = Math.round(data.ratio.neutral * 100);
+            try {
+                const url = new URL(input);
+                // https://www.youtube.com/watch?v=xxxx
+                if (url.searchParams.get("v")) {
+                    return url.searchParams.get("v");
+                }
+                // https://youtu.be/xxxx
+                if (url.hostname.includes("youtu.be")) {
+                    return url.pathname.replace("/", "");
+                }
+                // https://www.youtube.com/shorts/xxxx
+                if (url.pathname.startsWith("/shorts/")) {
+                    return url.pathname.replace("/shorts/", "");
+                }
+            } catch (e) {
+                // URL 파싱 실패 시 그냥 원본 반환
+                return input;
+            }
+            return input;
+        }
 
-        ratioText.textContent = `전체 댓글 중 찬성/반대/중립 비율은 다음과 같습니다.`;
-        ratioLegend.textContent = `찬성 ${pro}%, 반대 ${con}%, 중립 ${neu}%`;
+        submitBtn.addEventListener("click", async () => {
+            const mode = getCurrentMode();
+            const postId = document.getElementById("postId").value.trim() || "demo-post-1";
+            const userId = document.getElementById("userId").value.trim() || "user-1";
+            const opinion = document.getElementById("opinion").value.trim();
+            const videoRaw = document.getElementById("videoInput")?.value.trim() || "";
+            const videoId = extractVideoId(videoRaw);
 
-        // 막대그래프 width 설정 (합이 100%가 안 되어도 비율대로 분배)
-        ratioProSeg.style.width = pro + "%";
-        ratioConSeg.style.width = con + "%";
-        ratioNeuSeg.style.width = neu + "%";
+            if (!opinion) {
+                statusMsg.textContent = "의견을 먼저 입력해주세요.";
+                statusMsg.className = "error";
+                return;
+            }
 
-        // 3) 댓글 리스트 표시
-        commentList.innerHTML = "";
-        data.comments.forEach((cmt) => {
-          const li = document.createElement("li");
-          const textSpan = document.createElement("span");
-          textSpan.textContent = cmt.text + " ";
+            if (mode === "youtube" && !videoId) {
+                statusMsg.textContent = "YouTube URL 또는 영상 ID를 입력해주세요.";
+                statusMsg.className = "error";
+                return;
+            }
 
-          const badge = document.createElement("span");
-          badge.classList.add("badge");
-          badge.classList.add(cmt.stance);
+            submitBtn.disabled = true;
+            statusMsg.textContent = "서버에 요청 중입니다...";
+            statusMsg.className = "small";
 
-          if (cmt.stance === "pro") {
-            badge.textContent = "찬성";
-          } else if (cmt.stance === "con") {
-            badge.textContent = "반대";
-          } else {
-            badge.textContent = "중립";
-          }
+            let endpoint = "";
+            let payload = {};
 
-          li.appendChild(textSpan);
-          li.appendChild(badge);
-          commentList.appendChild(li);
+            if (mode === "demo") {
+                endpoint = "http://127.0.0.1:8000/opinion";
+                payload = {
+                    post_id: postId,
+                    user_id: userId,
+                    opinion_text: opinion
+                };
+            } else {
+                endpoint = "http://127.0.0.1:8000/opinion/youtube";
+                payload = {
+                    video_id: videoId,
+                    user_id: userId,
+                    opinion_text: opinion
+                };
+            }
+
+            try {
+                const resp = await fetch(endpoint, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await resp.json();
+
+                if (!resp.ok) {
+                    // FastAPI 쪽에서 detail을 던졌다면 그대로 보여주기
+                    const detail = data.detail || JSON.stringify(data);
+                    throw new Error(detail);
+                }
+
+                statusMsg.textContent = "분석 완료!";
+                statusMsg.className = "success";
+
+                // 대상 정보 블록 (데모 vs 유튜브)
+                if (mode === "demo") {
+                    targetInfoBlock.innerHTML = `
+                        <strong>분석 대상:</strong> 데모 댓글 세트<br/>
+                        <span class="small">post_id = ${escapeHtml(data.post_id || postId)}</span>
+                    `;
+                } else {
+                    targetInfoBlock.innerHTML = `
+                        <strong>분석 대상:</strong> YouTube 영상 댓글<br/>
+                        <span class="small">video_id = ${escapeHtml(data.post_id || videoId)}</span>
+                    `;
+                }
+
+                // 1) 내 의견
+                myOpinionBlock.innerHTML = `
+                    <strong>내 의견:</strong>
+                    <div style="margin-top:4px;">${escapeHtml(data.my_opinion || opinion)}</div>
+                `;
+
+                // 2) 비율
+                const pro = data.ratio?.pro || 0;
+                const con = data.ratio?.con || 0;
+                const neu = data.ratio?.neutral || 0;
+                const proPct = (pro * 100).toFixed(1);
+                const conPct = (con * 100).toFixed(1);
+                const neuPct = (neu * 100).toFixed(1);
+
+                const total = pro + con + neu;
+                const proWidth = total > 0 ? (pro / total) * 100 : 0;
+                const conWidth = total > 0 ? (con / total) * 100 : 0;
+                const neuWidth = total > 0 ? (neu / total) * 100 : 0;
+
+                ratioBlock.innerHTML = `
+                    <strong>댓글 여론 분포 (pro / con / neutral):</strong>
+                    <div class="ratio-bar">
+                        <div class="ratio-pro" style="width:${proWidth}%;"></div>
+                        <div class="ratio-con" style="width:${conWidth}%;"></div>
+                        <div class="ratio-neutral" style="width:${neuWidth}%;"></div>
+                    </div>
+                    <div class="ratio-labels">
+                        찬성(pro): ${proPct}% &nbsp; | &nbsp;
+                        반대(con): ${conPct}% &nbsp; | &nbsp;
+                        중립(neutral): ${neuPct}%
+                    </div>
+                `;
+
+                // 3) 댓글 리스트
+                if (Array.isArray(data.comments) && data.comments.length > 0) {
+                    let html = "<strong>댓글 샘플:</strong>";
+                    html += `<div style="margin-top:6px;">`;
+                    for (const c of data.comments) {
+                        const stance = c.stance || "neutral";
+                        let tagClass = "tag-neutral";
+                        let tagText = "neutral";
+                        if (stance === "pro") {
+                            tagClass = "tag-pro";
+                            tagText = "pro";
+                        } else if (stance === "con") {
+                            tagClass = "tag-con";
+                            tagText = "con";
+                        }
+                        html += `
+                            <div class="comment-item">
+                                <span class="tag ${tagClass}">${tagText}</span>
+                                <span>${escapeHtml(c.text)}</span>
+                            </div>
+                        `;
+                    }
+                    html += `</div>`;
+                    commentsBlock.innerHTML = html;
+                } else {
+                    commentsBlock.innerHTML = "<em>분석된 댓글이 없습니다.</em>";
+                }
+
+                resultSection.style.display = "block";
+            } catch (err) {
+                console.error(err);
+                statusMsg.textContent = "오류: " + err.message;
+                statusMsg.className = "error";
+            } finally {
+                submitBtn.disabled = false;
+            }
         });
 
-        // 결과 영역 보여주기
-        resultDiv.style.display = "block";
-        // 내 의견 입력창은 잠그지는 않고 그대로 두되, 사용자가 다시 눌러도 분석 가능
-
-      } catch (err) {
-        console.error(err);
-        errorMsg.textContent = "분석 중 오류가 발생했습니다. 서버가 켜져 있는지 확인해주세요.";
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "내 의견 등록하고 댓글 보기";
-      }
-    });
-  </script>
+        // 간단한 XSS 방지용 이스케이프
+        function escapeHtml(str) {
+            if (typeof str !== "string") return "";
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+        }
+    </script>
 </body>
 </html>

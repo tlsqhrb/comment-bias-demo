@@ -1,19 +1,24 @@
+import os
+from collections import Counter
+from typing import List, Literal, Dict
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Literal, Dict
-from collections import Counter
-import os
-
-import os
-from dotenv import load_dotenv
 
 import torch
 from transformers import ElectraTokenizer, ElectraForSequenceClassification
 
 from youtube_crawler import fetch_youtube_comments  # 유튜브 크롤러
+import traceback
 
+# ==============================
+# .env 로드 & 환경변수
+# ==============================
 load_dotenv()
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+print("DEBUG YOUTUBE_API_KEY:", YOUTUBE_API_KEY)  # 확인용, 나중에 지워도 됨
 
 # ==============================
 # FastAPI 앱 & CORS 설정
@@ -47,13 +52,6 @@ ID2STANCE = {
     1: "con",
     2: "neutral",
 }
-
-# ==============================
-# YouTube API 키 설정
-# ==============================
-# test_youtube_api.py에서 사용했던 그 키와 "똑같이" 넣기
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")  # 예: "AIzaSyB7_..."
-
 
 # ==============================
 # Pydantic 모델들
@@ -181,18 +179,24 @@ def submit_opinion_youtube(payload: YoutubeOpinionIn):
     - 해당 영상의 댓글을 YouTube Data API로 가져옴
     - 각 댓글 stance 분류 후 비율 계산
     """
-    if not YOUTUBE_API_KEY or os.getenv("YOUTUBE_API_KEY") in YOUTUBE_API_KEY:
+    # ✅ 여기 조건이 문제였음: 이제는 env만 체크
+    if not YOUTUBE_API_KEY:
         raise HTTPException(
             status_code=500,
-            detail="YOUTUBE_API_KEY가 설정되어 있지 않습니다. main.py 상단에서 실제 키로 교체하세요.",
+            detail="YOUTUBE_API_KEY가 설정되어 있지 않습니다. .env 파일을 확인하세요.",
         )
 
     # 1) 유튜브 댓글 가져오기
-    raw_comments = fetch_youtube_comments(
-        video_id=payload.video_id,
-        api_key=YOUTUBE_API_KEY,
-        max_comments=50,
-    )
+    try:
+        raw_comments = fetch_youtube_comments(
+            video_id=payload.video_id,
+            api_key=YOUTUBE_API_KEY,
+            max_comments=50,
+        )
+    except Exception as e:
+        print("=== /opinion/youtube: 댓글 수집 중 에러 ===")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"youtube_error: {e}")
 
     print(f"[DEBUG] 가져온 유튜브 댓글 수: {len(raw_comments)}")
 
@@ -208,10 +212,15 @@ def submit_opinion_youtube(payload: YoutubeOpinionIn):
     comment_objs: List[CommentWithStance] = []
     counts = Counter()
 
-    for text in raw_comments:
-        stance = classify(text)
-        counts[stance] += 1
-        comment_objs.append(CommentWithStance(text=text, stance=stance))
+    try:
+        for text in raw_comments:
+            stance = classify(text)
+            counts[stance] += 1
+            comment_objs.append(CommentWithStance(text=text, stance=stance))
+    except Exception as e:
+        print("=== /opinion/youtube: 분류 중 에러 ===")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"classify_error: {e}")
 
     total = sum(counts.values()) or 1
     ratio = {
@@ -236,11 +245,10 @@ def predict_single(body: SingleTextIn):
     stance = classify(body.text)
     return SingleTextOut(stance=stance)
 
-from fastapi import FastAPI, HTTPException
-import traceback
-# 위에 이미 fastapi import 돼 있으면 traceback만 추가해도 됨
 
-
+# ==============================
+# 4) YouTube 댓글만 테스트용 엔드포인트
+# ==============================
 @app.get("/youtube_test/{video_id}")
 def youtube_test(video_id: str):
     """
