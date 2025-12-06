@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>의견 선작성 기반 댓글 편향 완화 데모</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 16px 80px;
+      background-color: #f5f7fb;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    .card h2, .card h3 {
+      margin-top: 0;
+    }
+    textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      resize: vertical;
+      font-family: inherit;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .my-opinion {
+      background: #e0edff;
+      border: 1px solid #bfdbfe;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+    .badge.pro {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .badge.con {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .badge.neutral {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    ul {
+      padding-left: 18px;
+    }
+    li {
+      margin-bottom: 8px;
+    }
+    .ratio-bar {
+      display: flex;
+      height: 16px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #e5e7eb;
+      margin-top: 8px;
+    }
+    .ratio-seg {
+      height: 100%;
+    }
+    .ratio-seg.pro {
+      background: #22c55e;
+    }
+    .ratio-seg.con {
+      background: #ef4444;
+    }
+    .ratio-seg.neutral {
+      background: #9ca3af;
+    }
+    .ratio-legend {
+      margin-top: 8px;
+      font-size: 14px;
+      color: #374151;
+    }
+    .small {
+      font-size: 13px;
+      color: #6b7280;
+    }
+    #errorMsg {
+      color: #b91c1c;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>의견 선작성 기반 댓글 여론 분석 데모</h1>
+
+  <div class="card">
+    <h2>게시물</h2>
+    <p class="small">✏️ 예시 기사</p>
+    <p>
+      “최근 대중교통 요금 인상 방안이 발표되었습니다. 정부는 재정 부담을 이유로 들고 있으며,
+      시민들은 생활비 부담 증가를 우려하고 있습니다. 이에 대한 당신의 생각은 어떠신가요?”
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>① 먼저 당신의 의견을 남겨주세요</h2>
+    <p class="small">
+      ※ 다른 사람의 댓글을 보기 전에, 게시물에 대한 당신의 솔직한 생각을 한 줄로 적어주세요.
+    </p>
+    <textarea id="opinion" rows="4" placeholder="예: 재정 상황을 생각하면 어느 정도 인상은 이해되지만, 서민 부담 완화 대책도 같이 나와야 할 것 같습니다."></textarea>
+    <br />
+    <button id="submitBtn">내 의견 등록하고 댓글 보기</button>
+    <div id="errorMsg"></div>
+  </div>
+
+  <div id="result" style="display:none;">
+    <div class="card my-opinion">
+      <h3>② 나의 첫 의견</h3>
+      <p id="myOpinionText"></p>
+      <p class="small">※ 이 의견은 당신이 다른 댓글을 보기 전에 스스로 남긴 기준점(anchor)입니다.</p>
+    </div>
+
+    <div class="card">
+      <h3>③ 전체 댓글 여론 비율</h3>
+      <p id="ratioText" class="small">분석 중...</p>
+      <div class="ratio-bar">
+        <div id="ratioPro" class="ratio-seg pro" style="width:0%;"></div>
+        <div id="ratioCon" class="ratio-seg con" style="width:0%;"></div>
+        <div id="ratioNeu" class="ratio-seg neutral" style="width:0%;"></div>
+      </div>
+      <div class="ratio-legend" id="ratioLegend"></div>
+    </div>
+
+    <div class="card">
+      <h3>④ 다른 사람들의 댓글 (다양한 의견 보기)</h3>
+      <p class="small">
+        ※ 찬성/반대/중립 의견이 섞여서 노출됩니다. 각 댓글 옆의 배지를 통해 입장을 확인할 수 있습니다.
+      </p>
+      <ul id="commentList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const submitBtn = document.getElementById("submitBtn");
+    const opinionInput = document.getElementById("opinion");
+    const resultDiv = document.getElementById("result");
+    const myOpinionText = document.getElementById("myOpinionText");
+    const ratioText = document.getElementById("ratioText");
+    const ratioLegend = document.getElementById("ratioLegend");
+    const commentList = document.getElementById("commentList");
+    const errorMsg = document.getElementById("errorMsg");
+
+    const ratioProSeg = document.getElementById("ratioPro");
+    const ratioConSeg = document.getElementById("ratioCon");
+    const ratioNeuSeg = document.getElementById("ratioNeu");
+
+    submitBtn.addEventListener("click", async () => {
+      const opinion = opinionInput.value.trim();
+      errorMsg.textContent = "";
+
+      if (!opinion) {
+        errorMsg.textContent = "먼저 당신의 의견을 입력해주세요.";
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "분석 중...";
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/opinion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            post_id: "demo-post-1",
+            user_id: "demo-user-1",
+            opinion_text: opinion
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error("서버 응답이 올바르지 않습니다. (status " + res.status + ")");
+        }
+
+        const data = await res.json();
+
+        // 1) 내 의견 표시
+        myOpinionText.textContent = data.my_opinion;
+
+        // 2) 비율 표시
+        const pro = Math.round(data.ratio.pro * 100);
+        const con = Math.round(data.ratio.con * 100);
+        const neu = Math.round(data.ratio.neutral * 100);
+
+        ratioText.textContent = `전체 댓글 중 찬성/반대/중립 비율은 다음과 같습니다.`;
+        ratioLegend.textContent = `찬성 ${pro}%, 반대 ${con}%, 중립 ${neu}%`;
+
+        // 막대그래프 width 설정 (합이 100%가 안 되어도 비율대로 분배)
+        ratioProSeg.style.width = pro + "%";
+        ratioConSeg.style.width = con + "%";
+        ratioNeuSeg.style.width = neu + "%";
+
+        // 3) 댓글 리스트 표시
+        commentList.innerHTML = "";
+        data.comments.forEach((cmt) => {
+          const li = document.createElement("li");
+          const textSpan = document.createElement("span");
+          textSpan.textContent = cmt.text + " ";
+
+          const badge = document.createElement("span");
+          badge.classList.add("badge");
+          badge.classList.add(cmt.stance);
+
+          if (cmt.stance === "pro") {
+            badge.textContent = "찬성";
+          } else if (cmt.stance === "con") {
+            badge.textContent = "반대";
+          } else {
+            badge.textContent = "중립";
+          }
+
+          li.appendChild(textSpan);
+          li.appendChild(badge);
+          commentList.appendChild(li);
+        });
+
+        // 결과 영역 보여주기
+        resultDiv.style.display = "block";
+        // 내 의견 입력창은 잠그지는 않고 그대로 두되, 사용자가 다시 눌러도 분석 가능
+
+      } catch (err) {
+        console.error(err);
+        errorMsg.textContent = "분석 중 오류가 발생했습니다. 서버가 켜져 있는지 확인해주세요.";
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "내 의견 등록하고 댓글 보기";
+      }
+    });
+  </script>
+</body>
+</html>
