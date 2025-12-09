@@ -10,33 +10,33 @@ from pydantic import BaseModel
 import torch
 from transformers import ElectraTokenizer, ElectraForSequenceClassification
 
-from youtube_crawler import fetch_youtube_comments  # 유튜브 크롤러
+from youtube_crawler import fetch_youtube_comments  
 import traceback
 
-# ==============================
+
 # .env 로드 & 환경변수
-# ==============================
+
 load_dotenv()
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
-print("DEBUG YOUTUBE_API_KEY:", YOUTUBE_API_KEY)  # 확인용, 나중에 지워도 됨
+print("DEBUG YOUTUBE_API_KEY:", YOUTUBE_API_KEY)  
 
-# ==============================
+
 # FastAPI 앱 & CORS 설정
-# ==============================
+
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # 개발 단계: 전체 허용
+    allow_origins=["*"],       
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==============================
+
 # KoELECTRA stance 모델 로딩
-# ==============================
-MODEL_NAME = "./stance_model"  # train_stance_simple.py 결과
+
+MODEL_NAME = "./stance_model"  
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("사용 디바이스:", device)
@@ -53,9 +53,9 @@ ID2STANCE = {
     2: "neutral",
 }
 
-# ==============================
+
 # Pydantic 모델들
-# ==============================
+
 class OpinionIn(BaseModel):
     post_id: str
     user_id: str
@@ -77,7 +77,7 @@ class SummaryResponse(BaseModel):
     post_id: str
     my_opinion: str
     comments: List[CommentWithStance]
-    ratio: Dict[str, float]  # {"pro": 0.xx, "con": 0.xx, "neutral": 0.xx}
+    ratio: Dict[str, float]  
 
 
 class SingleTextIn(BaseModel):
@@ -88,9 +88,9 @@ class SingleTextOut(BaseModel):
     stance: Literal["pro", "con", "neutral"]
 
 
-# ==============================
+
 # 분류 함수 (내 모델 사용)
-# ==============================
+
 def classify(text: str) -> str:
     """
     한 문장을 입력받아 pro / con / neutral 중 하나를 반환.
@@ -119,17 +119,17 @@ def classify(text: str) -> str:
     return ID2STANCE.get(pred_id, "neutral")
 
 
-# ==============================
+
 # 헬스 체크
-# ==============================
+
 @app.get("/")
 def read_root():
     return {"message": "FastAPI + KoELECTRA stance 모델 서버 정상 동작 중!"}
 
 
-# ==============================
+
 # 1) 데모용 /opinion (샘플 댓글 사용)
-# ==============================
+
 @app.post("/opinion", response_model=SummaryResponse)
 def submit_opinion(opinion: OpinionIn):
     """
@@ -169,9 +169,9 @@ def submit_opinion(opinion: OpinionIn):
     )
 
 
-# ==============================
+
 # 2) 실제 YouTube 댓글 기반 /opinion/youtube
-# ==============================
+
 @app.post("/opinion/youtube", response_model=SummaryResponse)
 def submit_opinion_youtube(payload: YoutubeOpinionIn):
     """
@@ -179,7 +179,7 @@ def submit_opinion_youtube(payload: YoutubeOpinionIn):
     - 해당 영상의 댓글을 YouTube Data API로 가져옴
     - 각 댓글 stance 분류 후 비율 계산
     """
-    # ✅ 여기 조건이 문제였음: 이제는 env만 체크
+   
     if not YOUTUBE_API_KEY:
         raise HTTPException(
             status_code=500,
@@ -237,18 +237,18 @@ def submit_opinion_youtube(payload: YoutubeOpinionIn):
     )
 
 
-# ==============================
+
 # 3) 단일 문장 테스트용 /predict
-# ==============================
+
 @app.post("/predict", response_model=SingleTextOut)
 def predict_single(body: SingleTextIn):
     stance = classify(body.text)
     return SingleTextOut(stance=stance)
 
 
-# ==============================
+
 # 4) YouTube 댓글만 테스트용 엔드포인트
-# ==============================
+
 @app.get("/youtube_test/{video_id}")
 def youtube_test(video_id: str):
     """
@@ -265,7 +265,7 @@ def youtube_test(video_id: str):
             max_comments=10,
         )
         print(f"[DEBUG] youtube_test: {len(comments)}개 댓글 수집")
-        # 앞 5개만 미리보기로 반환
+    
         return {
             "video_id": video_id,
             "count": len(comments),
